@@ -98,7 +98,7 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { Folder, Edit, Delete, Refresh/*, ArrowDown, ArrowUp*/ } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import axios from 'axios'
@@ -411,6 +411,9 @@ export default {
       if (!url) return this.defaultFavicon;
       try {
         const urlObj = new URL(url);
+        if (urlObj.protocol === 'file:') {
+          return this.defaultFavicon;
+        }
         return `${urlObj.protocol}//${urlObj.hostname}/favicon.ico`;
       } catch (e) {
         return this.defaultFavicon;
@@ -663,9 +666,6 @@ export default {
       const target = e.target.closest('.tree-node')
       if (!target || target.classList.contains('no-drag')) return
 
-      e.preventDefault()
-      e.stopPropagation()
-
       const touch = e.touches[0]
       this.touchData = {
         isDragging: true,
@@ -759,6 +759,12 @@ export default {
 
     findTreeNode(id) {
       let result = null
+
+      if (!this.bookmarkTreeRef?.value?.store?.root) {
+        console.warn('Tree reference not initialized');
+        return null;
+      }
+      
       const traverse = (node) => {
         if (node.data.id === id) {
           result = node
@@ -803,7 +809,7 @@ export default {
     this.initTouchEvents()
   },
 
-  beforeDestroy() {
+  beforeUnmount() {
     this.removeTouchEvents()
   }
 }
@@ -827,6 +833,7 @@ export default {
 
 .bookmark-actions {
   opacity: 0;
+  margin-left: 8px;
 }
 
 .tree-folder-name {
@@ -901,11 +908,6 @@ export default {
     justify-content: space-between;
   }
 
-  .common-header h3 {
-    font-size: 16px;
-    margin: 0;
-  }
-
   :deep(.el-tree) {
     padding: 0 8px;
   }
@@ -924,6 +926,7 @@ export default {
     top: 0;
     bottom: 0;
     z-index: 1;
+    pointer-events: none;
   }
 
   :global(body.is-dragging) {
@@ -931,19 +934,6 @@ export default {
     touch-action: none;
   }
 
-  :global(body.is-dragging *) {
-    pointer-events: none;
-  }
-
-  .tree-node.is-dragging {
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-  }
-
-  :deep(.el-tree-node__children):has(.is-dragging) .tree-node:not(.is-dragging) {
-    opacity: 0.6;
-    transform: scale(0.98);
-    transition: all 0.2s ease;
-  }
 
   :deep(.el-button) {
     padding: 4px;
